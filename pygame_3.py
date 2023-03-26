@@ -82,6 +82,7 @@ class Player(pygame.sprite.Sprite):
 		self.jumping = False
 		self.running = False
 		self.attacking = False
+		self.cooldown = False
 		self.move_frame = 0
 		self.attack_frame = 0
 
@@ -143,8 +144,8 @@ class Player(pygame.sprite.Sprite):
 	def attack(self):
 		# cycle to the next frame depending on direction
 		if self.direction == 'LEFT':
-			self.correction()
 			self.image = attack_animation_L[self.attack_frame]
+			self.correction()
 		else:
 			self.image = attack_animation_R[self.attack_frame]
 		# update the frame
@@ -172,13 +173,59 @@ class Player(pygame.sprite.Sprite):
 				self.velocity.y = 0
 				self.jumping = False
 
+	def hit(self):
+		if not self.cooldown:
+			self.cooldown == True
+			pygame.time.set_timer(hit_cooldown, 0)
+			print('hit')
 
+	def render(self):
+		screen.blit(self.image, self.rect)
 
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
+		self.image = pygame.image.load("./rpg_images/Enemy.png")
+		self.rect = self.image.get_rect()
+		self.pos = vec((0,0))
+		self.velocity = vec((0,0))
+		
+		# initial direction
+		self.direction = random.choice(['RIGHT','LEFT']) # 0 for Right, 1 for Left
+		self.velocity.x = random.randint(2,6)
+		self.pos.x = 0 if self.direction == 'RIGHT' else 700
+		self.pos.y = 235
+
+	def move(self):
+		# switch directions at the boundary
+		if self.pos.x >= (WIDTH-20):
+			self.direction = 'LEFT'
+		if self.pos.x <= 20:
+			self.direction = 'RIGHT' 
+		
+		if self.direction == 'RIGHT':
+			self.pos.x += self.velocity.x
+		else:
+			self.pos.x -= self.velocity.x 
+		# bind the rect to the image
+		self.rect.center = self.pos
+
+	def update(self):
+		hit_player = pygame.sprite.spritecollide(self, players, dokill=False)
+		if hit_player and player.attacking and player.direction !=self.direction:
+			self.kill()
+		#	sys.exit(0)
+		elif hit_player and not player.attacking:
+			player.hit()
+		else:
+			pass
+
+	def render(self):
+		screen.blit(self.image, (self.pos.x, self.pos.y))
+
 
 class Background(pygame.sprite.Sprite):
+
 	def __init__(self):
 		super().__init__()
 		self.bgimg = pygame.image.load("./rpg_images/Background.png")
@@ -203,17 +250,25 @@ class Ground(pygame.sprite.Sprite):
 background = Background()
 ground = Ground()
 player = Player()
-
+enemy = Enemy()
 
 # Creating groups and adding instances to groups
 grounds = pygame.sprite.Group()
 grounds.add(ground)
 
 players = pygame.sprite.Group()
-enemies = pygame.sprite.Group()
+players.add(player)
 
+enemies = pygame.sprite.Group()
+enemies.add(enemy)
 
 # Functions
+
+
+
+
+# User-defined events
+hit_cooldown = pygame.USEREVENT + 1
 
 
 
@@ -230,6 +285,10 @@ while True:
 
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			pass
+
+		if event.type == hit_cooldown:
+			player.cooldown = False
+			pygame.time.set_timer(hit_cooldown,0)
 		
 		if event.type == pygame.KEYDOWN:
 			
@@ -238,19 +297,22 @@ while True:
 			
 			if event.key == pygame.K_RETURN:
 				if player.attacking == False:
+					player.attacking = True
 					player.attack()
-					player.attacking == True
 	
 	#Moves
 	player.update()
 	if player.attacking == True:
 		player.attack()
 	player.move()
+	enemy.move()
+	enemy.update()
 
 	# Rendering
 	pygame.display.update()
 	background.render()
 	ground.render()
-	screen.blit(player.image, player.rect)
+	player.render()
+	enemy.render()
 
 	frames_per_second.tick(60)
