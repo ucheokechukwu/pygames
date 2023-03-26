@@ -6,7 +6,7 @@ import sys
 import random
 from tkinter import *
 from tkinter import filedialog
-
+print(Tk())
 
 pygame.init()
 vec = pygame.math.Vector2
@@ -189,36 +189,9 @@ class Enemy(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.pos = vec((0,0))
 		self.velocity = vec((0,0))
-		
-		# initial direction
-		self.direction = random.choice(['RIGHT','LEFT']) # 0 for Right, 1 for Left
-		self.velocity.x = random.randint(2,6)
-		self.pos.x = 0 if self.direction == 'RIGHT' else 700
-		self.pos.y = 235
+	    
 
-	def move(self):
-		# switch directions at the boundary
-		if self.pos.x >= (WIDTH-20):
-			self.direction = 'LEFT'
-		if self.pos.x <= 20:
-			self.direction = 'RIGHT' 
-		
-		if self.direction == 'RIGHT':
-			self.pos.x += self.velocity.x
-		else:
-			self.pos.x -= self.velocity.x 
-		# bind the rect to the image
-		self.rect.center = self.pos
 
-	def update(self):
-		hit_player = pygame.sprite.spritecollide(self, players, dokill=False)
-		if hit_player and player.attacking and player.direction !=self.direction:
-			self.kill()
-		#	sys.exit(0)
-		elif hit_player and not player.attacking:
-			player.hit()
-		else:
-			pass
 
 	def render(self):
 		screen.blit(self.image, (self.pos.x, self.pos.y))
@@ -244,11 +217,76 @@ class Ground(pygame.sprite.Sprite):
 	def render(self):
 		screen.blit(self.image, (self.rect.x, self.rect.y))
 
+class Castle(pygame.sprite.Sprite):
+	def __init__(self):
+		super().__init__()
+		self.hide = False
+		self.image = pygame.image.load("./rpg_images/Castle.png")
+
+	def render(self):
+		if self.hide == False:
+			screen.blit(self.image, (400,80))
+
+class EventHandler():
+	def __init__(self):
+		self.enemy_count = 0
+		self.battle = False
+		#enemy generation
+		self.enemy_generation = pygame.USEREVENT + 1
+		self.stage_enemies =[]
+		# formula to calculate the number of enemies in each level
+		for x in range(1,21):
+			self.stage_enemies.append(int(x**2 / 2  +  1))
+			
+	def stage_handler(self):
+		# code for the Tkinter stage selection window
+		self.root = Tk()
+		self.root.geometry('200x170')
+
+		button1 = Button(self.root, text='Twilight Dungeon',
+									width=18,
+									height=2,
+									command=self.world1)
+		button2 = Button(self.root, text='Skyward Dungeon',
+									width=18,
+									height=2,
+									command=self.world2)			
+		button3 = Button(self.root, text='Hell Dungeon',
+									width=18,
+									height=2,
+									command=self.world3)
+		button1.place(x=40,y=15)
+		button2.place(x=40,y=65)
+		button3.place(x=40,y=115)
+		
+		self.root.mainloop()
+		print ("Buttons")
+
+	def world1(self):
+		self.root.destroy()
+		pygame.time.set_timer(self.enemy_generation, 2000)
+		castle.hide = True
+		self.battle = True
+
+	def world2(self):
+		self.battle = True
+		pass
+
+	def world3(self):
+		self.battle = True
+		pass
+
 # Main Game 
 
 # Instancing the objects
 background = Background()
 ground = Ground()
+castle = Castle()
+handler = EventHandler()
+
+
+
+
 player = Player()
 enemy = Enemy()
 
@@ -299,20 +337,27 @@ while True:
 				if player.attacking == False:
 					player.attacking = True
 					player.attack()
-	
+				
+			if event.key == pygame.K_e: # and (450 < player.rect.x < 550):
+			# the above code checks to see the player is near the Castle entrace when 'e' is pressed
+				handler.stage_handler()
+				
+
+
+
 	#Moves
 	player.update()
 	if player.attacking == True:
 		player.attack()
 	player.move()
-	enemy.move()
-	enemy.update()
+
 
 	# Rendering
 	pygame.display.update()
 	background.render()
 	ground.render()
+	castle.render()
 	player.render()
-	enemy.render()
+
 
 	frames_per_second.tick(60)
